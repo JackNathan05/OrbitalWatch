@@ -152,33 +152,43 @@ Open http://localhost:3000.
 
 1. Push this repo to GitHub
 2. Go to https://railway.app, create a new project from your GitHub repo
-3. Set the **root directory** to `backend`
-4. Railway will detect the Dockerfile and build automatically
-5. Add a **PostgreSQL** addon (Railway dashboard > New > Database > PostgreSQL)
+3. Set the **root directory** to `backend` (Settings > Source)
+4. Railway detects the Dockerfile and builds automatically
+5. Add a database addon — two options:
+   - **Standard Postgres** (default): Railway dashboard > New > Database > PostgreSQL. Works fine. The app detects missing TimescaleDB and falls back to regular Postgres.
+   - **TimescaleDB** (optional, faster on large datasets): Railway dashboard > New > Template > search "TimescaleDB" > deploy.
 6. Add a **Redis** addon (Railway dashboard > New > Database > Redis)
-7. Set these environment variables in the Railway service settings:
+7. In your backend service > **Variables** tab, set these. For `DATABASE_URL` and `REDIS_URL`, use Railway's reference variables so they auto-update if addons change:
 
 | Variable | Value |
 |----------|-------|
-| `DATABASE_URL` | Provided automatically by the PostgreSQL addon. Copy the `DATABASE_URL` from the addon's Variables tab. |
-| `REDIS_URL` | Provided automatically by the Redis addon. Copy the `REDIS_URL` from the addon's Variables tab. |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` (or `${{TimescaleDB.DATABASE_URL}}` if using the template) |
+| `REDIS_URL` | `${{Redis.REDIS_URL}}` |
 | `SPACETRACK_USERNAME` | Your Space-Track.org email |
 | `SPACETRACK_PASSWORD` | Your Space-Track.org password |
-| `CORS_ORIGINS` | Your Vercel frontend URL, e.g. `https://orbital-watch.vercel.app` |
+| `CORS_ORIGINS` | Your Vercel frontend URL, e.g. `https://orbital-watch.vercel.app` (use `*` for testing) |
 | `CELESTRAK_BASE_URL` | `https://celestrak.org` |
 | `APP_ENV` | `production` |
 
-8. Deploy. Railway gives you a public URL like `https://orbitalwatch-backend-production.up.railway.app`
-9. After first deploy, trigger initial data load by running the ingestion scripts once. You can do this via Railway's shell (Settings > Shell):
+8. In your backend service > **Settings** > **Networking**, click **Generate Domain** to get a public URL like `https://orbitalwatch-backend-production.up.railway.app`
+9. Deploy. Tables are created automatically on startup. The `/` healthcheck will go green.
+10. After the first deploy, the database is empty. Run the ingestion scripts once via Railway's shell. Install the Railway CLI (`npm i -g @railway/cli`), then:
 
 ```bash
-python init_db.py
-python ingest_all.py
-python ingest_satcat.py
-python ingest_cdms.py
+railway login
+railway link           # pick your project and backend service
+railway run python ingest_all.py
+railway run python ingest_satcat.py
+railway run python ingest_cdms.py
 ```
 
-The backend scheduler will keep data fresh after that.
+Or open your backend service in the Railway dashboard and use the built-in shell (top-right menu > Shell).
+
+The backend's built-in scheduler refreshes all data every 4 hours after that — no need to run these scripts again unless the DB is wiped.
+
+**Notes:**
+- On plain Postgres, the `timescaledb` extension isn't available. The app logs a one-line notice and continues with standard Postgres. Hypertable features aren't used; everything works on regular tables.
+- If you used the TimescaleDB template, the extension installs automatically and the app takes advantage of it.
 
 ### Frontend on Vercel
 

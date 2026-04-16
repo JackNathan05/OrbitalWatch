@@ -165,7 +165,14 @@ async def scheduler():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await init_db()
+    # Try to init DB but don't crash the app if it fails.
+    # The healthcheck needs to come up so Railway knows the container is alive.
+    try:
+        await init_db()
+        logger.info("Database initialized.")
+    except Exception as e:
+        logger.error(f"Database init failed (will retry in scheduler): {e}")
+
     task = asyncio.create_task(scheduler())
     yield
     task.cancel()

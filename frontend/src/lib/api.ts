@@ -1,7 +1,8 @@
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+const API_BASE = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/+$/, "");
 
 async function fetchApi<T>(path: string, params?: Record<string, string>): Promise<T> {
-  const url = new URL(`${API_BASE}${path}`);
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  const url = new URL(`${API_BASE}${normalizedPath}`);
   if (params) {
     Object.entries(params).forEach(([key, val]) => url.searchParams.set(key, val));
   }

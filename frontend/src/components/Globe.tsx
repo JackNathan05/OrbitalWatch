@@ -27,11 +27,15 @@ export default function Globe({ positions, onSatelliteClick, onConjunctionFocus,
     async function init() {
       if (!containerRef.current) return;
 
+      // CRITICAL: set CESIUM_BASE_URL on window BEFORE importing cesium.
+      // Cesium reads this at import time to locate Workers/Assets/Widgets.
+      (window as unknown as Record<string, unknown>).CESIUM_BASE_URL = "/cesium/";
+
       const cesiumModule = await import("cesium");
       Cesium = cesiumModule;
 
-      // Set Cesium static asset path
-      (window as unknown as Record<string, unknown>).CESIUM_BASE_URL = "/cesium";
+      // Belt-and-suspenders: also set it via the module API
+      Cesium.buildModuleUrl.setBaseUrl("/cesium/");
 
       // Import Cesium CSS
       await import("cesium/Build/Cesium/Widgets/widgets.css");

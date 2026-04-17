@@ -34,9 +34,6 @@ export default function Globe({ positions, onSatelliteClick, onConjunctionFocus,
       const cesiumModule = await import("cesium");
       Cesium = cesiumModule;
 
-      // Belt-and-suspenders: also set it via the module API
-      Cesium.buildModuleUrl.setBaseUrl("/cesium/");
-
       // Import Cesium CSS
       await import("cesium/Build/Cesium/Widgets/widgets.css");
 

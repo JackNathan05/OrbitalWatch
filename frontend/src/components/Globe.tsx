@@ -27,44 +27,52 @@ export default function Globe({ positions, onSatelliteClick, onConjunctionFocus,
     async function init() {
       if (!containerRef.current) return;
 
-      // CRITICAL: set CESIUM_BASE_URL on window BEFORE importing cesium.
-      // Cesium reads this at import time to locate Workers/Assets/Widgets.
-      (window as unknown as Record<string, unknown>).CESIUM_BASE_URL = "/cesium/";
+      try {
+        // CRITICAL: set CESIUM_BASE_URL on window BEFORE importing cesium.
+        // Cesium reads this at import time to locate Workers/Assets/Widgets.
+        (window as unknown as Record<string, unknown>).CESIUM_BASE_URL = "/cesium/";
 
-      const cesiumModule = await import("cesium");
-      Cesium = cesiumModule;
+        const cesiumModule = await import("cesium");
+        Cesium = cesiumModule;
 
-      // Import Cesium CSS
-      await import("cesium/Build/Cesium/Widgets/widgets.css");
+        // Import Cesium CSS
+        await import("cesium/Build/Cesium/Widgets/widgets.css");
 
-      if (!mounted || !containerRef.current) return;
+        if (!mounted || !containerRef.current) return;
 
-      // Configure Ion token if available
-      const ionToken = process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN;
-      if (ionToken) {
-        Cesium.Ion.defaultAccessToken = ionToken;
-      }
+        // Configure Ion token if available
+        const ionToken = process.env.NEXT_PUBLIC_CESIUM_ION_TOKEN;
+        if (ionToken) {
+          Cesium.Ion.defaultAccessToken = ionToken;
+        }
 
-      const viewer = new Cesium.Viewer(containerRef.current, {
-        animation: false,
-        baseLayerPicker: false,
-        fullscreenButton: false,
-        geocoder: false,
-        homeButton: false,
-        infoBox: false,
-        sceneModePicker: false,
-        selectionIndicator: true,
-        timeline: false,
-        navigationHelpButton: false,
-        scene3DOnly: true,
-        shouldAnimate: true,
-        // Use a dark base layer
-        baseLayer: Cesium.ImageryLayer.fromProviderAsync(
-          Cesium.TileMapServiceImageryProvider.fromUrl(
-            Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"),
-          )
-        ),
-      });
+        // Build viewer options. If no Ion token, use local Natural Earth tiles.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const viewerOptions: any = {
+          animation: false,
+          baseLayerPicker: false,
+          fullscreenButton: false,
+          geocoder: false,
+          homeButton: false,
+          infoBox: false,
+          sceneModePicker: false,
+          selectionIndicator: true,
+          timeline: false,
+          navigationHelpButton: false,
+          scene3DOnly: true,
+          shouldAnimate: true,
+        };
+
+        if (!ionToken) {
+          // No Ion token — use locally-hosted Natural Earth imagery
+          viewerOptions.baseLayer = Cesium.ImageryLayer.fromProviderAsync(
+            Cesium.TileMapServiceImageryProvider.fromUrl(
+              Cesium.buildModuleUrl("Assets/Textures/NaturalEarthII"),
+            ),
+          );
+        }
+
+        const viewer = new Cesium.Viewer(containerRef.current, viewerOptions);
 
       // Dark space background
       viewer.scene.backgroundColor = Cesium.Color.BLACK;
@@ -92,8 +100,11 @@ export default function Globe({ positions, onSatelliteClick, onConjunctionFocus,
         Cesium.ScreenSpaceEventType.LEFT_CLICK,
       );
 
-      viewerRef.current = viewer;
-      setReady(true);
+        viewerRef.current = viewer;
+        setReady(true);
+      } catch (err) {
+        console.error("Globe init failed:", err);
+      }
     }
 
     init();
